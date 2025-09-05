@@ -1,15 +1,17 @@
 package rag.util;
 
 import org.apache.commons.io.FilenameUtils;
+import rag.model.CallBack;
 import rag.model.Document;
+import rag.model.Tracker;
 
 import java.io.File;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
 
-import static rag.config.AppConfig.DOC_PATH;
 import static rag.config.AppConfig.DOCUMENTS;
+import static rag.config.AppConfig.DOC_PATH;
 
 public class FileUtils {
     private static final int MAX_DEPTHS = 4;
@@ -17,15 +19,19 @@ public class FileUtils {
     public static class FolderTask extends RecursiveAction {
         private final File folder;
         private final int depth;
+        private final Tracker tracker;
+        private final CallBack callback;
 
-        public FolderTask(File folder, int depth) {
+        public FolderTask(File folder, int depth, Tracker tracker, CallBack func) {
             this.folder = folder;
             this.depth = depth;
+            this.tracker = tracker;
+            this.callback = func;
         }
 
         @Override
         protected void compute() {
-            if (depth > MAX_DEPTHS || !folder.exists() || !folder.canRead()) {
+            if (depth > MAX_DEPTHS || !folder.exists() || !folder.canRead() || folder.isHidden()) {
                 return;
             }
 
@@ -39,10 +45,13 @@ public class FileUtils {
                 try {
                     if (file.isFile() && allowed(file)) {
                         if (file.length() < 100 * 1024 * 1024) {
-                            DOCUMENTS.add(new Document(file.getName(), file.getAbsolutePath().substring(DOC_PATH.length())));
+                            String filePath = file.getAbsolutePath().substring(DOC_PATH.length());
+                            DOCUMENTS.add(new Document(file.getName(), filePath));
+                            tracker.countTotal();
+                            callback.callBackCnt(tracker.getTotal()); // UI에 탐색한 수 출력
                         }
                     } else if (file.isDirectory() && !isSystemDirectory(file)) {
-                        subTasks.add(new FolderTask(file, depth + 1)); // 하위 디렉토리를 새로운 태스크로 추가
+                        subTasks.add(new FolderTask(file, depth + 1, tracker, callback)); // 하위 디렉토리를 새로운 태스크로 추가
                     }
                 } catch (Exception e) {
                     continue;
@@ -74,7 +83,8 @@ public class FileUtils {
         return allowedExts.contains(ext);
     }
 
-    public static String extractMeaningfulText(String fileName, String path) {
+    // hugging face 사용 시 전처리 - 속도, 정확도 약간 향상
+/*    public static String extractMeaningfulText(String fileName, String path) {
         String nameWithoutExt = FilenameUtils.getBaseName(fileName);
 
         String cleanName = nameWithoutExt.replaceAll("[_-]", " ");
@@ -97,5 +107,5 @@ public class FileUtils {
         }
 
         return result.trim();
-    }
+    }*/
 }

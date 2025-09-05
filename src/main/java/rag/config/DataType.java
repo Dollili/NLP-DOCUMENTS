@@ -5,6 +5,6 @@ public class DataType {
     String INDEX_FILE_BINARY = "document_index.dat";
 
     public String getSaveFormat() {
-        return INDEX_FILE_JSON;
+        return INDEX_FILE_BINARY;
     }
 }

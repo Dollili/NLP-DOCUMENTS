@@ -3,7 +3,9 @@ package rag.service;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import rag.config.DataType;
+import rag.model.CallBack;
 import rag.model.Document;
+import rag.model.Tracker;
 import rag.util.FileUtils;
 
 import java.io.*;
@@ -18,17 +20,15 @@ import static rag.config.AppConfig.*;
 public class IndexService {
     private static final String SAVE_PATH = new DataType().getSaveFormat();
 
-    public static void buildIndex() {
-        System.out.println("문서 인덱싱 중...");
-        getDocuments();
-        saveIndex();
-        System.out.println("인덱스 저장");
+    public static String buildIndex(Tracker tracker, CallBack func) {
+        getDocuments(tracker, func);
+        return saveIndex();
     }
 
     // 문서 인덱싱 시작
-    public static void getDocuments() {
+    public static void getDocuments(Tracker tracker, CallBack func) {
         ForkJoinPool pool = new ForkJoinPool(MAX_WORKER);
-        pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0));
+        pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0, tracker, func));
         pool.shutdown();
     }
 
@@ -52,7 +52,7 @@ public class IndexService {
     }
 
     // 인덱스 저장
-    public static void saveIndex() {
+    public static String saveIndex() {
         try {
             if (SAVE_PATH.endsWith("json")) {
                 JSONArray jsonArray = new JSONArray();
@@ -70,16 +70,16 @@ public class IndexService {
                     oos.writeObject(new ArrayList<>(DOCUMENTS));
                 }
             }
-            System.out.println("인덱스 파일 저장: " + SAVE_PATH);
+            return "인덱스 파일 저장: " + SAVE_PATH;
         } catch (Exception e) {
-            System.err.println("인덱스 저장 실패: " + e.getMessage());
+            return "인덱스 저장 실패: " + e.getMessage();
         }
     }
 
     // 인덱스 로드
     @SuppressWarnings("unchecked")
-    public static void loadIndex() {
-        System.out.println("기존 인덱스 로드...");
+    public static void loadIndex(Tracker tracker, CallBack func) {
+        System.out.println("기존 인덱스 로딩 중...");
         try {
             if (SAVE_PATH.endsWith("json")) {
                 String content = Files.readString(Paths.get(SAVE_PATH));
@@ -100,7 +100,7 @@ public class IndexService {
             }
         } catch (Exception e) {
             System.err.println("인덱스 로드 실패: " + e.getMessage());
-            buildIndex();
+            buildIndex(tracker, func);
         }
     }
 

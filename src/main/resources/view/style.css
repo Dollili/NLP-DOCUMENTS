@@ -1,4 +1,44 @@
 .root {
-    -fx-font-family: Arial;
+    -fx-font-family: "Roboto Regular";
     -fx-font-size: 12px;
+    -fx-background-color: #393939;
+}
+
+Text {
+    -fx-fill: white;
+}
+
+TextField {
+    -fx-background-color: #5a5a5a;
+    -fx-text-fill: white;
+}
+
+.text-area {
+    -fx-background-color: #5a5a5a;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+
+.text-area .content {
+    -fx-background-color: #5a5a5a;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+
+.text-area .scroll-pane .viewport {
+    -fx-background-radius: 10;
+    -fx-background-color: transparent; /* 흰 배경 제거 */
+}
+
+.root > .button {
+    -fx-background-color: linear-gradient(to bottom, #d135d1, #9f0e9f);
+    -fx-text-fill: white;
+}
+
+.root > .button:hover {
+    -fx-background-color: #d135d1;
+}
+
+.root > .button:pressed {
+    -fx-background-color: #9f0e9f;
 }

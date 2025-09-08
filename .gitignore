@@ -31,3 +31,4 @@ bin/
 document_index.json
 document_index.dat
 *.png
+*.dat

@@ -1,10 +1,11 @@
 package rag.config;
 
 public class DataType {
-    String INDEX_FILE_JSON = "document_index.json";
-    String INDEX_FILE_BINARY = "document_index.dat";
+    String INDEX_FILE_JSON = ".json";
+    String INDEX_FILE_BINARY = ".dat";
 
-    public String getSaveFormat() {
+    public String getFileExt() {
         return INDEX_FILE_BINARY;
     }
+
 }

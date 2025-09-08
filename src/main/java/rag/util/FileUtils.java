@@ -3,9 +3,12 @@ package rag.util;
 import org.apache.commons.io.FilenameUtils;
 import rag.model.CallBack;
 import rag.model.Document;
-import rag.model.Tracker;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
@@ -19,43 +22,47 @@ public class FileUtils {
     public static class FolderTask extends RecursiveAction {
         private final File folder;
         private final int depth;
-        private final Tracker tracker;
         private final CallBack callback;
 
-        public FolderTask(File folder, int depth, Tracker tracker, CallBack func) {
+        public FolderTask(File folder, int depth, CallBack func) {
             this.folder = folder;
             this.depth = depth;
-            this.tracker = tracker;
             this.callback = func;
         }
 
         @Override
         protected void compute() {
-            if (depth > MAX_DEPTHS || !folder.exists() || !folder.canRead() || folder.isHidden()) {
+            if (isFolder(depth, folder)) {
                 return;
             }
 
-            File[] files = folder.listFiles();
+            /*File[] files = folder.listFiles();
             if (files == null)
-                return;
+                return;*/
 
             List<FolderTask> subTasks = new java.util.ArrayList<>();
 
-            for (File file : files) {
-                try {
-                    if (file.isFile() && allowed(file)) {
-                        if (file.length() < 100 * 1024 * 1024) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder.toPath())) {
+                for (Path path : stream) {
+                    File file = path.toFile();
+                    try {
+                        if (file.isFile() && allowed(file)) {
                             String filePath = file.getAbsolutePath().substring(DOC_PATH.length());
-                            DOCUMENTS.add(new Document(file.getName(), filePath));
-                            tracker.countTotal();
-                            callback.callBackCnt(tracker.getTotal()); // UI에 탐색한 수 출력
+                            synchronized (DOCUMENTS) {
+                                DOCUMENTS.add(new Document(file.getName(), filePath));
+                            }
+                            if (callback != null) {
+                                callback.callBackCnt("TOTAL :: " + DOCUMENTS.size()); // UI에 탐색한 수 출력
+                            }
+                        } else if (file.isDirectory() && !isSystemDirectory(file)) {
+                            subTasks.add(new FolderTask(file, depth + 1, callback)); // 하위 디렉토리를 새로운 태스크로 추가
                         }
-                    } else if (file.isDirectory() && !isSystemDirectory(file)) {
-                        subTasks.add(new FolderTask(file, depth + 1, tracker, callback)); // 하위 디렉토리를 새로운 태스크로 추가
+                    } catch (Exception e) {
+                        System.err.println("파일 탐색 중 오류 발생: " + e.getMessage());
                     }
-                } catch (Exception e) {
-                    continue;
                 }
+            } catch (IOException e) {
+                System.err.println("디렉토리 접근 실패: " + e.getMessage());
             }
 
             // 병렬 실행
@@ -63,6 +70,15 @@ public class FileUtils {
                 invokeAll(subTasks);
             }
         }
+    }
+
+    public static boolean isFolder(String path) {
+        File folder = new File(path);
+        return !folder.exists() || !folder.canRead() || folder.isHidden();
+    }
+
+    public static boolean isFolder(int depth, File folder) {
+        return depth > MAX_DEPTHS || !folder.exists() || !folder.canRead() || folder.isHidden();
     }
 
     public static boolean isSystemDirectory(File file) {

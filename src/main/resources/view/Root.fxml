@@ -13,7 +13,7 @@
     <Text layoutX="155.0" layoutY="40.0" strokeType="OUTSIDE" strokeWidth="0.0" text="기본 경로" />
     <TextArea fx:id="resultArea" layoutX="18.0" layoutY="102.0" prefHeight="209.0" prefWidth="486.0" />
     <Text id="timeout" layoutX="514.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="소요 시간: " />
-    <Text fx:id="time" layoutX="577.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="0 ms" />
+    <Text fx:id="time" layoutX="577.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="0 sec" />
     <Text layoutX="18.0" layoutY="85.0" strokeType="OUTSIDE" strokeWidth="0.0" text="관련 경로 상위 10" wrappingWidth="157.4296875">
     </Text>
     <Text layoutX="514.0" layoutY="228.0" strokeType="OUTSIDE" strokeWidth="0.0" text="찾은 경로 수:" />

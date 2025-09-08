@@ -5,7 +5,6 @@ import org.json.JSONObject;
 import rag.config.DataType;
 import rag.model.CallBack;
 import rag.model.Document;
-import rag.model.Tracker;
 import rag.util.FileUtils;
 
 import java.io.*;
@@ -18,30 +17,30 @@ import java.util.concurrent.ForkJoinPool;
 import static rag.config.AppConfig.*;
 
 public class IndexService {
-    private static final String SAVE_PATH = new DataType().getSaveFormat();
+    private static final String SAVE_PATH = new DataType().getFileExt();
 
-    public static String buildIndex(Tracker tracker, CallBack func) {
-        getDocuments(tracker, func);
-        return saveIndex();
+    public static String buildIndex(String path, CallBack func) {
+        getDocuments(func);
+        return saveIndex(path);
     }
 
     // 문서 인덱싱 시작
-    public static void getDocuments(Tracker tracker, CallBack func) {
+    public static void getDocuments(CallBack func) {
         ForkJoinPool pool = new ForkJoinPool(MAX_WORKER);
-        pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0, tracker, func));
+        pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0, func));
         pool.shutdown();
     }
 
-    public static boolean shouldRebuildIndex() {
+    public static boolean shouldRebuildIndex(String path) {
         try {
-            File file = new File(SAVE_PATH);
+            File file = new File(path + SAVE_PATH);
             // 인덱스 파일이 없으면 재구축
             if (!file.exists()) {
                 return true;
             }
             long indexAge = System.currentTimeMillis() - file.lastModified();
-            if (indexAge > 3L * 24 * 60 * 60 * 1000) { // 3일
-                System.out.println("3일 경과된 인덱스 ::: 재인덱싱");
+            if (indexAge > 24 * 60 * 60 * 1000) { // 1일
+                System.out.println("1일 경과 ::: 업데이트");
                 return true;
             }
             return false;
@@ -52,7 +51,8 @@ public class IndexService {
     }
 
     // 인덱스 저장
-    public static String saveIndex() {
+    public static String saveIndex(String path) {
+        System.out.println("인덱스 생성 중...");
         try {
             if (SAVE_PATH.endsWith("json")) {
                 JSONArray jsonArray = new JSONArray();
@@ -62,15 +62,15 @@ public class IndexService {
                     jsonArray.put(jsonDoc);
                 }
 
-                try (FileWriter writer = new FileWriter(SAVE_PATH)) {
+                try (FileWriter writer = new FileWriter(path + SAVE_PATH)) {
                     writer.write(jsonArray.toString(2));
                 }
             } else {
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(SAVE_PATH))) {
+                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path + SAVE_PATH))) {
                     oos.writeObject(new ArrayList<>(DOCUMENTS));
                 }
             }
-            return "인덱스 파일 저장: " + SAVE_PATH;
+            return "인덱스 파일 저장: " + path +SAVE_PATH;
         } catch (Exception e) {
             return "인덱스 저장 실패: " + e.getMessage();
         }
@@ -78,11 +78,11 @@ public class IndexService {
 
     // 인덱스 로드
     @SuppressWarnings("unchecked")
-    public static void loadIndex(Tracker tracker, CallBack func) {
+    public static void loadIndex(String path, CallBack func) {
         System.out.println("기존 인덱스 로딩 중...");
         try {
             if (SAVE_PATH.endsWith("json")) {
-                String content = Files.readString(Paths.get(SAVE_PATH));
+                String content = Files.readString(Paths.get(path + SAVE_PATH));
                 JSONArray jsonArray = new JSONArray(content);
                 DOCUMENTS.clear();
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -92,7 +92,7 @@ public class IndexService {
                     DOCUMENTS.add(doc);
                 }
             } else {
-                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(SAVE_PATH))) {
+                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path + SAVE_PATH))) {
                     List<Document> loadedDocs = (List<Document>) ois.readObject();
                     DOCUMENTS.clear();
                     DOCUMENTS.addAll(loadedDocs);
@@ -100,7 +100,7 @@ public class IndexService {
             }
         } catch (Exception e) {
             System.err.println("인덱스 로드 실패: " + e.getMessage());
-            buildIndex(tracker, func);
+            buildIndex(path, func);
         }
     }
 

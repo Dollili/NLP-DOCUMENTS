@@ -20,10 +20,10 @@ public class SearchService {
     private static final String API_KEY = "";
     private static final String G_API_KEY = "";
 
-    private static final int TOP_K_RESULTS = 10;
-    private static final int BATCH_SIZE = 50;
+//    private static final int TOP_K_RESULTS = 10;
+//    private static final int BATCH_SIZE = 50;
 
-    private static final ConcurrentHashMap<String, float[]> similarityCache = new ConcurrentHashMap<>();
+    private static final Map<String, String[]> cache = new ConcurrentHashMap<>();
 
     public static Map<String, Object> findPath(String question) throws Exception {
         Map<String, Object> result = new HashMap<>();
@@ -35,7 +35,7 @@ public class SearchService {
         long searchStart = System.currentTimeMillis();
         result.put("success", searchGoogle(question));
         long searchTime = System.currentTimeMillis() - searchStart;
-        result.put("taskTime", searchTime);
+        result.put("taskTime", (double) searchTime / 1000.0);
         return result;
     }
 
@@ -44,12 +44,16 @@ public class SearchService {
     }
 
     public static String[] googleGemini(String question, List<Document> docs) throws Exception {
+        if (cache.containsKey(question)) {
+            return cache.get(question);
+        }
+
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
         StringBuilder prompt = new StringBuilder();
         prompt.append("질문: ").append(question).append("\n");
-        prompt.append("아래의 문서 경로들 중 가장 관련있는 경로 상위 10개를 결과값(경로)만 그대로 출력해줘.\n");
-        prompt.append("예: 경로 ::: 유사도, 경로 ::: 유사도, 경로 ::: 유사도 ... (텍스트로 출력할 것)\n");
+        prompt.append("아래의 문서 경로들 중 가장 관련있는 경로 상위 10개를 결과값(경로)만 그대로 출력해줘.\n" +
+                "예: 경로 ::: 유사도, 경로 ::: 유사도, 경로 ::: 유사도 ... (텍스트로 출력할 것, 유사도는 소수점 두번째 자리까지)");
         prompt.append("문서: \n");
         String[] docTexts = docs.stream().map(doc -> doc.path).toArray(String[]::new);
 
@@ -70,7 +74,7 @@ public class SearchService {
                 .build();
 
         HttpResponse<String> response = null;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) { // 3번 시도
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 break;
@@ -92,7 +96,8 @@ public class SearchService {
         JSONArray parts = jsonArray.getJSONObject(0).getJSONObject("content").getJSONArray("parts");
         String answer = parts.getJSONObject(0).getString("text").trim();
 
-        return answer.split("\n");
+        cache.put(question, answer.split("[,\n]"));
+        return answer.split("[,\n]");
     }
 
     // 구 버전 - huggingface 무료 api 이용

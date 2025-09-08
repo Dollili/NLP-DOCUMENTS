@@ -7,18 +7,18 @@
 <?import javafx.scene.text.Text?>
 
 <AnchorPane prefHeight="337.0" prefWidth="650.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="rag.controller.RootController">
-    <Button fx:id="search_btn" layoutX="401.0" layoutY="51.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="조회" />
-    <TextField fx:id="search_input" layoutX="229.0" layoutY="51.0" prefHeight="23.0" prefWidth="157.0" />
+    <Button fx:id="search_btn" layoutX="435.0" layoutY="51.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="조회" />
+    <TextField fx:id="search_input" layoutX="229.0" layoutY="51.0" prefHeight="23.0" prefWidth="193.0" />
     <Text layoutX="171.0" layoutY="66.0" strokeType="OUTSIDE" strokeWidth="0.0" text="검색어" />
     <Text layoutX="155.0" layoutY="40.0" strokeType="OUTSIDE" strokeWidth="0.0" text="기본 경로" />
     <TextArea fx:id="resultArea" layoutX="18.0" layoutY="102.0" prefHeight="209.0" prefWidth="486.0" />
     <Text id="timeout" layoutX="514.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="소요 시간: " />
-    <Text fx:id="time" layoutX="577.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="ms" />
+    <Text fx:id="time" layoutX="577.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="0 ms" />
     <Text layoutX="18.0" layoutY="85.0" strokeType="OUTSIDE" strokeWidth="0.0" text="관련 경로 상위 10" wrappingWidth="157.4296875">
     </Text>
     <Text layoutX="514.0" layoutY="228.0" strokeType="OUTSIDE" strokeWidth="0.0" text="찾은 경로 수:" />
     <Text fx:id="sumDoc" layoutX="592.0" layoutY="227.0" strokeType="OUTSIDE" strokeWidth="0.0" text="값" />
-    <TextField fx:id="path_input" layoutX="229.0" layoutY="24.0" prefHeight="23.0" prefWidth="157.0" />
-    <Button fx:id="path_btn" alignment="CENTER" cache="true" layoutX="401.0" layoutY="24.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="설정" />
+    <TextField fx:id="path_input" layoutX="229.0" layoutY="24.0" prefHeight="23.0" prefWidth="193.0" />
+    <Button fx:id="path_btn" alignment="CENTER" cache="true" layoutX="435.0" layoutY="24.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="설정" />
    <Button fx:id="clear_btn" layoutX="514.0" layoutY="283.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="clear" />
 </AnchorPane>

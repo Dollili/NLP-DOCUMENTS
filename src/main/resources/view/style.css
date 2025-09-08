@@ -1,11 +1,12 @@
 .root {
-    -fx-font-family: "Roboto Regular";
+    -fx-font-family: "Dialog";
     -fx-font-size: 12px;
     -fx-background-color: #323232;
 }
 
 Text {
     -fx-fill: white;
+    -fx-font-weight: bold;
 }
 
 TextField {
@@ -15,19 +16,19 @@ TextField {
 
 .text-area {
     -fx-background-color: #5a5a5a;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
     -fx-text-fill: white;
 }
 
 .text-area .content {
     -fx-background-color: #5a5a5a;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
 }
 
 .text-area .scroll-pane .viewport {
-    -fx-background-radius: 10;
+    -fx-background-radius: 7;
     -fx-background-color: transparent; /* 흰 배경 제거 */
 }
 

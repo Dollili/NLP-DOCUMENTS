@@ -20,4 +20,5 @@
     <Text fx:id="sumDoc" layoutX="592.0" layoutY="227.0" strokeType="OUTSIDE" strokeWidth="0.0" text="값" />
     <TextField fx:id="path_input" layoutX="229.0" layoutY="24.0" prefHeight="23.0" prefWidth="157.0" />
     <Button fx:id="path_btn" alignment="CENTER" cache="true" layoutX="401.0" layoutY="24.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="설정" />
+   <Button fx:id="clear_btn" layoutX="514.0" layoutY="283.0" mnemonicParsing="false" prefHeight="22.0" prefWidth="51.0" text="clear" />
 </AnchorPane>

@@ -13,7 +13,7 @@
     <Text fx:id="progress" layoutX="99.0" layoutY="55.0" strokeType="OUTSIDE" strokeWidth="0.0" text="status"
           textAlignment="CENTER" wrappingWidth="100.0"/>
     <Text id="emptyText" fx:id="emptyText" layoutX="28.0" layoutY="79.0" strokeType="OUTSIDE" strokeWidth="0.0"
-          text="state" textAlignment="CENTER" wrappingWidth="243.0">
+          textAlignment="CENTER" wrappingWidth="243.0">
         <font>
             <Font size="11.0"/>
         </font>

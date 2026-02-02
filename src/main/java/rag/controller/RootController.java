@@ -100,53 +100,135 @@ public class RootController implements Initializable {
     //질문 조회 task
     private Task<Map<String, Object>> getMapTask() {
         sumDoc.setText(String.valueOf(DOCUMENTS.size()));
-        String input = search_input.getText(); // 질문
+        String input = search_input.getText().trim(); // 질문
 
         Task<Map<String, Object>> task = new Task<>() {
             @Override
-            protected Map<String, Object> call() throws Exception {
+            protected Map<String, Object> call() {
                 return SearchService.findPath(input);
             }
         };
 
         task.setOnSucceeded(e -> {
             Map<String, Object> result = task.getValue();
-            if (result.get("success") != null) {
+            
+            if (result == null) {
                 searchClear();
-                double taskTime = (double) result.get("taskTime");
-                time.setText(String.format("%.1f sec", taskTime));
-
-                String[] parts = (String[]) result.get("success");
-                if (parts != null && parts.length > 0) {
-                    StringBuilder sb = new StringBuilder();
-                    for (String part : parts) {
-                        part = part.trim();
-                        sb.append(DOC_PATH).append(part).append("\n");
-                    }
-                    resultArea.appendText(sb.toString());
-                } else {
-                    resultArea.appendText("폴더 경로 혹은 검색어를 다시 확인해주세요.\n (기본 폴더 경로를 기반으로 탐색합니다)");
-                }
+                resultArea.setText("검색 중 오류가 발생했습니다.");
+                search_btn.setDisable(false);
+                return;
             }
+            
+            // 에러 처리
+            if (result.containsKey("error")) {
+                searchClear();
+                String errorMsg = (String) result.get("error");
+                resultArea.setText(errorMsg);
+                search_btn.setDisable(false);
+                return;
+            }
+            
+            // 성공 처리
+            if (result.containsKey("success")) {
+                searchClear();
+                
+                Object timeObj = result.get("taskTime");
+                if (timeObj instanceof Double) {
+                    double taskTime = (double) timeObj;
+                    time.setText(String.format("%.1f sec", taskTime));
+                } else {
+                    time.setText("N/A");
+                }
+
+                Object successObj = result.get("success");
+                if (successObj instanceof String[]) {
+                    String[] parts = (String[]) successObj;
+                    
+                    if (parts.length > 0) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("✅ ").append(parts.length).append("개의 관련 문서를 찾았습니다.\n\n");
+                        
+                        for (int i = 0; i < parts.length; i++) {
+                            String part = parts[i].trim();
+                            if (!part.isEmpty()) {
+                                sb.append(String.format("%d. %s%s\n", 
+                                        i + 1, 
+                                        DOC_PATH, 
+                                        part));
+                            }
+                        }
+                        resultArea.setText(sb.toString());
+                    } else {
+                        resultArea.setText("관련 문서를 찾을 수 없습니다.\n\n" +
+                                         "다음을 확인해주세요:\n" +
+                                         "• 검색어를 다시 확인해주세요\n" +
+                                         "• 폴더 경로가 올바른지 확인해주세요\n" +
+                                         "• 해당 폴더에 문서가 있는지 확인해주세요");
+                    }
+                } else {
+                    resultArea.setText("검색 결과 형식이 올바르지 않습니다.");
+                }
+            } else {
+                searchClear();
+                resultArea.setText("알 수 없는 응답 형식입니다.");
+            }
+            
             search_btn.setDisable(false);
         });
 
         task.setOnFailed(e -> {
             searchClear();
-            resultArea.setText(task.getException().getMessage().split(":")[0] + " ::: 재시도 필요");
+            Throwable exception = task.getException();
+            
+            String errorMessage = "검색 중 오류 발생";
+            if (exception != null) {
+                String exMsg = exception.getMessage();
+                if (exMsg != null && !exMsg.isEmpty()) {
+                    String[] lines = exMsg.split("\n");
+                    errorMessage = lines.length > 0 ? lines[0] : exMsg;
+                } else {
+                    errorMessage = exception.getClass().getSimpleName();
+                }
+            }
+            
+            resultArea.setText(errorMessage + "\n\n잠시 후 다시 시도해주세요.");
+            System.err.println("검색 실패: " + exception);
+            
+            if (exception != null) {
+                exception.printStackTrace();
+            }
+            
             search_btn.setDisable(false);
         });
+        
         return task;
     }
 
     private static Task<Void> getTaskIndex() {
         return new Task<Void>() {
             @Override
-            protected Void call() throws Exception {
-                if (IndexService.shouldRebuildIndex(getDocPathEnd())) {
-                    IndexService.buildIndex(getDocPathEnd(), null);
-                } else {
-                    IndexService.loadIndex(getDocPathEnd(), null);
+            protected Void call() {
+                try {
+                    String docPathEnd = getDocPathEnd();
+                    
+                    if (docPathEnd == null || docPathEnd.trim().isEmpty()) {
+                        updateMessage("경로가 설정되지 않았습니다.");
+                        return null;
+                    }
+                    
+                    if (IndexService.shouldRebuildIndex(docPathEnd)) {
+                        updateMessage("인덱스 재구축 중...");
+                        String result = IndexService.buildIndex(docPathEnd, null);
+                        updateMessage(result);
+                    } else {
+                        updateMessage("기존 인덱스 로드 중...");
+                        IndexService.loadIndex(docPathEnd, null);
+                        updateMessage("인덱스 로드 완료");
+                    }
+                } catch (Exception e) {
+                    updateMessage("인덱스 처리 실패: " + e.getMessage());
+                    System.err.println("인덱스 작업 실패: " + e.getMessage());
+                    e.printStackTrace();
                 }
                 return null;
             }
@@ -168,17 +250,33 @@ public class RootController implements Initializable {
     private void pathChoice(Alert alert) {
         path_btn.setOnMouseClicked(event -> {
             String txt = path_input.getText().trim();
+            
             alert.setTitle("알림");
             alert.setHeaderText(null);
-            alert.getDialogPane().setPrefSize(150, 100);
-            if (isFolder(txt)) {
+            alert.getDialogPane().setPrefSize(250, 100);
+            
+            if (txt.isEmpty()) {
                 flag = true;
-                alert.setContentText("폴더 경로를 입력해주세요.");
-            } else {
-                setDocPath(txt);
-                flag = false;
-                alert.setContentText("경로 설정 완료");
+                alert.setContentText("경로를 입력해주세요.");
+                alert.showAndWait();
+                return;
             }
+            
+            try {
+                if (isFolder(txt)) {
+                    flag = true;
+                    alert.setContentText("유효하지 않은 폴더 경로입니다.\n실제 존재하는 폴더를 입력해주세요.");
+                } else {
+                    setDocPath(txt);
+                    flag = false;
+                    alert.setContentText("경로 설정 완료\n문서: " + DOCUMENTS.size() + "개");
+                }
+            } catch (Exception e) {
+                flag = true;
+                alert.setContentText("경로 확인 중 오류 발생:\n" + e.getMessage());
+                System.err.println("경로 검증 오류: " + e.getMessage());
+            }
+            
             alert.showAndWait();
         });
     }

@@ -46,9 +46,9 @@ public class DocumentApp extends Application {
         controller.update(task);
 
         task.setOnSucceeded(e -> {
-            stage.close();
-
             try {
+                stage.close();
+
                 FXMLLoader fxmlLoader = new FXMLLoader(DocumentApp.class.getResource("/view/Root.fxml"));
                 Parent root = fxmlLoader.load();
                 Scene scene = new Scene(root);
@@ -65,37 +65,96 @@ public class DocumentApp extends Application {
                     System.exit(0);
                 });
             } catch (IOException ex) {
-                throw new RuntimeException(ex);
+                System.err.println("메인 화면 로드 실패: " + ex.getMessage());
+                ex.printStackTrace();
+                
+                Platform.runLater(() -> {
+                    controller.status("화면 로드 실패");
+                    controller.status2("프로그램을 다시 시작해주세요: " + ex.getMessage());
+                });
+            } catch (Exception ex) {
+                System.err.println("예상치 못한 오류: " + ex.getMessage());
+                ex.printStackTrace();
+                
+                Platform.runLater(() -> {
+                    controller.status("오류 발생");
+                    controller.status2(ex.getMessage());
+                });
             }
         });
 
         task.setOnFailed(e -> {
+            Throwable exception = task.getException();
+            String errorMsg = "작업 실패";
+            
+            if (exception != null) {
+                errorMsg = exception.getMessage() != null ? 
+                          exception.getMessage() : 
+                          exception.getClass().getSimpleName();
+                System.err.println("작업 실패: " + errorMsg);
+                exception.printStackTrace();
+            }
+            
+            final String finalErrorMsg = errorMsg;
             Platform.runLater(() -> {
-                controller.status("오류 발생: " + e.toString());
+                controller.status("오류 발생");
+                controller.status2(finalErrorMsg);
             });
         });
 
         Thread thread = new Thread(task);
-        thread.setDaemon(false); // 종료 시 task도 같이 종료
+        thread.setDaemon(false);
+        thread.setUncaughtExceptionHandler((t, ex) -> {
+            System.err.println("스레드 예외 발생: " + ex.getMessage());
+            ex.printStackTrace();
+            
+            Platform.runLater(() -> {
+                controller.status("심각한 오류 발생");
+                controller.status2("프로그램을 다시 시작해주세요.");
+            });
+        });
         thread.start();
     }
 
     private static Task<Void> getTaskIndex(LoadingController controller) {
         return new Task<Void>() {
             @Override
-            protected Void call() throws Exception {
-                if (IndexService.shouldRebuildIndex(getDocPathEnd())) {
-                    if (!getDocPathEnd().isEmpty()) {
-                        controller.status("\uD83D\uDCC1 문서 인덱싱 중");
+            protected Void call() {
+                try {
+                    String docPathEnd = getDocPathEnd();
+                    
+                    if (docPathEnd == null || docPathEnd.isEmpty()) {
+                        updateMessage("⚠️ 초기 경로 설정이 필요합니다.");
+                        controller.status("⚠️ 초기 경로 설정이 필요합니다.");
+                        controller.status2("프로그램 실행 후 경로를 설정해주세요.");
+                        return null;
+                    }
+                    
+                    if (IndexService.shouldRebuildIndex(docPathEnd)) {
+                        updateMessage("📁 문서 인덱싱 중...");
+                        controller.status("📁 문서 인덱싱 중");
                         controller.status2("처음 실행 시에만 수행되는 작업입니다.");
-                        String result = IndexService.buildIndex(getDocPathEnd(), this::updateMessage);
+                        
+                        String result = IndexService.buildIndex(docPathEnd, this::updateMessage);
+                        
+                        updateMessage(result);
                         controller.status2(result);
                     } else {
-                        controller.status("\uD83D\uDCC1 초기 경로 설정이 필요합니다.");
+                        updateMessage("📂 기존 인덱스 로드 중...");
+                        controller.status("📂 기존 인덱스 로드 중");
+                        
+                        IndexService.loadIndex(docPathEnd, null);
+                        
+                        updateMessage("✅ 인덱스 로드 완료");
+                        controller.status2("인덱스 로드 완료");
                     }
-                } else {
-                    controller.status("\uD83D\uDCC1 기존 인덱스 로드 중");
-                    IndexService.loadIndex(getDocPathEnd(), null);
+                } catch (Exception e) {
+                    String errorMsg = "인덱스 처리 실패: " + e.getMessage();
+                    updateMessage(errorMsg);
+                    controller.status("❌ 오류 발생");
+                    controller.status2(errorMsg);
+                    System.err.println(errorMsg);
+                    e.printStackTrace();
                 }
                 return null;
             }

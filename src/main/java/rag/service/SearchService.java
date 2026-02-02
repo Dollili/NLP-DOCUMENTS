@@ -53,7 +53,7 @@ public class SearchService {
         StringBuilder prompt = new StringBuilder();
         prompt.append("질문: ").append(question).append("\n");
         prompt.append("아래의 문서 경로들 중 가장 관련있는 경로 상위 10개를 결과값(경로)만 그대로 출력해줘.\n" +
-                "예: 경로 ::: 유사도, 경로 ::: 유사도, 경로 ::: 유사도 ... (텍스트로 출력할 것, 유사도는 소수점 두번째 자리까지)");
+                "예: 경로 ::: 유사도, 경로 ::: 유사도, 경로 ::: 유사도 ... (텍스트로 출력할 것, 유사도는 소수점 두번째 자리까지, 사담은 넣지 않기)");
         prompt.append("문서: \n");
         String[] docTexts = docs.stream().map(doc -> doc.path).toArray(String[]::new);
 
@@ -96,8 +96,14 @@ public class SearchService {
         JSONArray parts = jsonArray.getJSONObject(0).getJSONObject("content").getJSONArray("parts");
         String answer = parts.getJSONObject(0).getString("text").trim();
 
-        cache.put(question, answer.split("[,\n]"));
-        return answer.split("[,\n]");
+        if (docTexts.length < 10) {
+            return docTexts;
+        } else if (answer.contains("없습니다") || answer.contains("실패") || answer.contains("죄송") || answer.contains("않았습니다")) {
+            return new String[0];
+        } else {
+            cache.put(question, answer.split("[,\n]"));
+            return answer.split("[,\n]");
+        }
     }
 
     // 구 버전 - huggingface 무료 api 이용

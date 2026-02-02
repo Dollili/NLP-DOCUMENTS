@@ -14,6 +14,10 @@ public class AppConfig {
         DOC_PATH = docPath;
     }
 
+    public static String getDocPath() {
+        return DOC_PATH;
+    }
+
     public static String getDocPathEnd() {
         String[] pathList = DOC_PATH.split("[/\\\\]");
         return pathList[pathList.length - 1];

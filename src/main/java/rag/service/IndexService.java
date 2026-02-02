@@ -18,6 +18,8 @@ import static rag.config.AppConfig.*;
 
 public class IndexService {
     private static final String SAVE_PATH = new DataType().getFileExt();
+    private static final String sysPath = System.getProperty("user.dir") + File.separator + "temp";
+    private static final File folder = new File(sysPath);
 
     public static String buildIndex(String path, CallBack func) {
         getDocuments(func);
@@ -33,7 +35,8 @@ public class IndexService {
 
     public static boolean shouldRebuildIndex(String path) {
         try {
-            File file = new File(path + SAVE_PATH);
+            String fullPath = sysPath + File.separator + path + SAVE_PATH;
+            File file = new File(fullPath);
             // 인덱스 파일이 없으면 재구축
             if (!file.exists()) {
                 return true;
@@ -53,6 +56,13 @@ public class IndexService {
     // 인덱스 저장
     public static String saveIndex(String path) {
         System.out.println("인덱스 생성 중...");
+
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+
+        String fullPath = sysPath + File.separator + path + SAVE_PATH;
+
         try {
             if (SAVE_PATH.endsWith("json")) {
                 JSONArray jsonArray = new JSONArray();
@@ -62,15 +72,15 @@ public class IndexService {
                     jsonArray.put(jsonDoc);
                 }
 
-                try (FileWriter writer = new FileWriter(path + SAVE_PATH)) {
+                try (FileWriter writer = new FileWriter(fullPath)) {
                     writer.write(jsonArray.toString(2));
                 }
             } else {
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path + SAVE_PATH))) {
+                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fullPath))) {
                     oos.writeObject(new ArrayList<>(DOCUMENTS));
                 }
             }
-            return "인덱스 파일 저장: " + path +SAVE_PATH;
+            return "인덱스 파일 저장: " + fullPath +SAVE_PATH;
         } catch (Exception e) {
             return "인덱스 저장 실패: " + e.getMessage();
         }
@@ -80,9 +90,11 @@ public class IndexService {
     @SuppressWarnings("unchecked")
     public static void loadIndex(String path, CallBack func) {
         System.out.println("기존 인덱스 로딩 중...");
+        String fullPath = sysPath + File.separator + path + SAVE_PATH;
+
         try {
             if (SAVE_PATH.endsWith("json")) {
-                String content = Files.readString(Paths.get(path + SAVE_PATH));
+                String content = Files.readString(Paths.get(fullPath));
                 JSONArray jsonArray = new JSONArray(content);
                 DOCUMENTS.clear();
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -92,7 +104,7 @@ public class IndexService {
                     DOCUMENTS.add(doc);
                 }
             } else {
-                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path + SAVE_PATH))) {
+                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fullPath))) {
                     List<Document> loadedDocs = (List<Document>) ois.readObject();
                     DOCUMENTS.clear();
                     DOCUMENTS.addAll(loadedDocs);

@@ -39,12 +39,10 @@ public class RootController implements Initializable {
     public Button clear_btn;
 
     public static boolean flag = false;
-
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         clearButton();
 
-        String firstPath = DOC_PATH;
         path_input.setText(DOC_PATH);
         sumDoc.setText(String.valueOf(DOCUMENTS.size()));
 
@@ -69,7 +67,7 @@ public class RootController implements Initializable {
                 return;
             }
 
-            if (isValid(firstPath)) {
+            if (isValid(getDocPath())) {
                 alert.getDialogPane().setPrefSize(350, 100);
                 alert.setContentText("경로가 변경되어 재탐색합니다.");
                 alert.showAndWait();
@@ -117,12 +115,18 @@ public class RootController implements Initializable {
                 searchClear();
                 double taskTime = (double) result.get("taskTime");
                 time.setText(String.format("%.1f sec", taskTime));
+
                 String[] parts = (String[]) result.get("success");
-                StringBuilder sb = new StringBuilder();
-                for (String part : parts) {
-                    sb.append(DOC_PATH).append(part).append("\n");
+                if (parts != null && parts.length > 0) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String part : parts) {
+                        part = part.trim();
+                        sb.append(DOC_PATH).append(part).append("\n");
+                    }
+                    resultArea.appendText(sb.toString());
+                } else {
+                    resultArea.appendText("폴더 경로 혹은 검색어를 다시 확인해주세요.\n (기본 폴더 경로를 기반으로 탐색합니다)");
                 }
-                resultArea.appendText(sb.toString());
             }
             search_btn.setDisable(false);
         });
@@ -166,9 +170,9 @@ public class RootController implements Initializable {
             String txt = path_input.getText().trim();
             alert.setTitle("알림");
             alert.setHeaderText(null);
+            alert.getDialogPane().setPrefSize(150, 100);
             if (isFolder(txt)) {
                 flag = true;
-                alert.getDialogPane().setPrefSize(150, 100);
                 alert.setContentText("폴더 경로를 입력해주세요.");
             } else {
                 setDocPath(txt);

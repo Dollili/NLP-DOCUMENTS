@@ -33,16 +33,16 @@ TextField {
 }
 
 .root > .button {
-    -fx-background-color: linear-gradient(to bottom, #d135d1, #9f0e9f);
+    -fx-background-color: linear-gradient(to bottom, #9366ac, #a048ba);
     -fx-text-fill: white;
 }
 
 .root > .button:hover {
-    -fx-background-color: #d135d1;
+    -fx-background-color: #9366ac;
 }
 
 .root > .button:pressed {
-    -fx-background-color: #9f0e9f;
+    -fx-background-color: #a048ba;
 }
 
 #clear_btn {

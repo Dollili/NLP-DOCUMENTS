@@ -90,6 +90,8 @@ public class DocumentApp extends Application {
                         controller.status2("처음 실행 시에만 수행되는 작업입니다.");
                         String result = IndexService.buildIndex(getDocPathEnd(), this::updateMessage);
                         controller.status2(result);
+                    } else {
+                        controller.status("\uD83D\uDCC1 초기 경로 설정이 필요합니다.");
                     }
                 } else {
                     controller.status("\uD83D\uDCC1 기존 인덱스 로드 중");

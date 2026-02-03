@@ -4,6 +4,7 @@ import org.apache.commons.io.FilenameUtils;
 import rag.model.CallBack;
 import rag.model.Document;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -19,6 +20,69 @@ import static rag.config.AppConfig.DOC_PATH;
 public class FileUtils {
     private static final int MAX_DEPTHS = 4;
 
+    /**
+     * 파일 경로에서 폴더 경로를 추출하여 탐색기에서 엽니다.
+     * @param fullPath 전체 파일 경로
+     * @return 성공 여부
+     */
+    public static boolean openFolderInExplorer(String fullPath) {
+        try {
+            File file = new File(fullPath);
+            File folder;
+            
+            // 파일이면 부모 폴더를, 폴더면 그 폴더를 엽니다
+            if (file.isFile()) {
+                folder = file.getParentFile();
+            } else if (file.isDirectory()) {
+                folder = file;
+            } else {
+                // 파일이 존재하지 않으면 경로를 분석하여 폴더 추출
+                String path = file.getAbsolutePath();
+                int lastSeparator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+                if (lastSeparator > 0) {
+                    folder = new File(path.substring(0, lastSeparator));
+                } else {
+                    System.err.println("유효하지 않은 경로: " + fullPath);
+                    return false;
+                }
+            }
+            
+            if (folder == null || !folder.exists()) {
+                System.err.println("폴더가 존재하지 않습니다: " + folder);
+                return false;
+            }
+            
+            // Desktop API를 사용하여 폴더 열기
+            if (Desktop.isDesktopSupported()) {
+                Desktop desktop = Desktop.getDesktop();
+                if (desktop.isSupported(Desktop.Action.OPEN)) {
+                    desktop.open(folder);
+                    System.out.println("폴더 열기 성공: " + folder.getAbsolutePath());
+                    return true;
+                }
+            }
+            
+            // Desktop API가 지원되지 않으면 OS별 명령어 실행
+            String os = System.getProperty("os.name").toLowerCase();
+            if (os.contains("win")) {
+                // Windows
+                Runtime.getRuntime().exec("explorer.exe /select," + folder.getAbsolutePath());
+            } else if (os.contains("mac")) {
+                // macOS
+                Runtime.getRuntime().exec("open " + folder.getAbsolutePath());
+            } else if (os.contains("nix") || os.contains("nux")) {
+                // Linux
+                Runtime.getRuntime().exec("xdg-open " + folder.getAbsolutePath());
+            }
+            
+            return true;
+        } catch (IOException e) {
+            System.err.println("폴더 열기 실패: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static class FolderTask extends RecursiveAction {
         private final File folder;
         private final int depth;
@@ -32,10 +96,9 @@ public class FileUtils {
 
         @Override
         protected void compute() {
-            if (isFolder(depth, folder)) {
+            if (isFolderInvalid(depth, folder)) {
                 return;
             }
-
             /*File[] files = folder.listFiles();
             if (files == null)
                 return;*/
@@ -72,12 +135,12 @@ public class FileUtils {
         }
     }
 
-    public static boolean isFolder(String path) {
+    public static boolean isFolderInvalid(String path) {
         File folder = new File(path);
         return !folder.exists() || !folder.canRead() || folder.isHidden();
     }
 
-    public static boolean isFolder(int depth, File folder) {
+    public static boolean isFolderInvalid(int depth, File folder) {
         return depth > MAX_DEPTHS || !folder.exists() || !folder.canRead() || folder.isHidden();
     }
 

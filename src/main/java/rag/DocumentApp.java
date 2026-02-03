@@ -145,13 +145,13 @@ public class DocumentApp extends Application {
                         
                         IndexService.loadIndex(docPathEnd, null);
                         
-                        updateMessage("✅ 인덱스 로드 완료");
+                        updateMessage("인덱스 로드 완료");
                         controller.status2("인덱스 로드 완료");
                     }
                 } catch (Exception e) {
                     String errorMsg = "인덱스 처리 실패: " + e.getMessage();
                     updateMessage(errorMsg);
-                    controller.status("❌ 오류 발생");
+                    controller.status("오류 발생");
                     controller.status2(errorMsg);
                     System.err.println(errorMsg);
                     e.printStackTrace();

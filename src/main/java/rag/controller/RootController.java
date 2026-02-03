@@ -3,10 +3,7 @@ package rag.controller;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.text.Text;
 import rag.service.IndexService;
 import rag.service.SearchService;
@@ -16,7 +13,8 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import static rag.config.AppConfig.*;
-import static rag.util.FileUtils.isFolder;
+import static rag.util.FileUtils.isFolderInvalid;
+import static rag.util.FileUtils.openFolderInExplorer;
 
 public class RootController implements Initializable {
     //base 경로
@@ -32,13 +30,14 @@ public class RootController implements Initializable {
     @FXML
     public Text time;
     @FXML
-    public TextArea resultArea;
+    public ListView<String> resultList;  // TextArea -> ListView로 변경
     @FXML
     public Text sumDoc;
     @FXML
     public Button clear_btn;
 
     public static boolean flag = false;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         clearButton();
@@ -47,6 +46,9 @@ public class RootController implements Initializable {
         sumDoc.setText(String.valueOf(DOCUMENTS.size()));
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+
+        // ListView 클릭 이벤트 추가
+        setupResultListClickHandler();
 
         pathChoice(alert);
         search_btn.setOnMouseClicked(event -> {
@@ -74,6 +76,7 @@ public class RootController implements Initializable {
 
                 Task<Void> reIndex = getTaskIndex();
                 reIndex.setOnSucceeded(e -> {
+                    sumDoc.setText(String.valueOf(DOCUMENTS.size()));
                     startSearch();
                 });
 
@@ -87,9 +90,60 @@ public class RootController implements Initializable {
 
     }
 
+    /**
+     * ListView 아이템 클릭 시 폴더 열기
+     */
+    private void setupResultListClickHandler() {
+        resultList.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {  // 더블 클릭
+                String selectedItem = resultList.getSelectionModel().getSelectedItem();
+                if (selectedItem != null && !selectedItem.isEmpty()) {
+                    // "1. 경로" 형식에서 경로만 추출
+                    String path = extractPathFromListItem(selectedItem);
+                    if (path != null) {
+                        boolean success = openFolderInExplorer(path);
+                        if (!success) {
+                            Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                            errorAlert.setTitle("오류");
+                            errorAlert.setHeaderText(null);
+                            errorAlert.setContentText("폴더를 열 수 없습니다:\n" + path);
+                            errorAlert.showAndWait();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * ListView 아이템에서 실제 경로 추출
+     * "1. C:\path\to\folder ::: 0.95" 형식에서 경로만 추출
+     */
+    private String extractPathFromListItem(String item) {
+        if (item == null || item.isEmpty()) {
+            return null;
+        }
+        
+        // "1. " 제거
+        int dotIndex = item.indexOf(". ");
+        if (dotIndex >= 0) {
+            item = item.substring(dotIndex + 2).trim();
+        }
+        
+        // " :::" 로 유사도 부분 제거
+        int separatorIndex = item.indexOf(" :::");
+        if (separatorIndex >= 0) {
+            item = item.substring(0, separatorIndex).trim();
+        }
+        
+        return item.isEmpty() ? null : item;
+    }
+
     private void startSearch() {
         search_btn.setDisable(true);
-        resultArea.setText("조회 중...");
+        resultList.getItems().clear();
+        resultList.getItems().add("조회 중...");
+        
         Task<Map<String, Object>> task = getMapTask();
 
         Thread thread = new Thread(task);
@@ -114,7 +168,7 @@ public class RootController implements Initializable {
             
             if (result == null) {
                 searchClear();
-                resultArea.setText("검색 중 오류가 발생했습니다.");
+                resultList.getItems().add("검색 중 오류가 발생했습니다.");
                 search_btn.setDisable(false);
                 return;
             }
@@ -123,7 +177,7 @@ public class RootController implements Initializable {
             if (result.containsKey("error")) {
                 searchClear();
                 String errorMsg = (String) result.get("error");
-                resultArea.setText(errorMsg);
+                resultList.getItems().add(errorMsg);
                 search_btn.setDisable(false);
                 return;
             }
@@ -145,32 +199,29 @@ public class RootController implements Initializable {
                     String[] parts = (String[]) successObj;
                     
                     if (parts.length > 0) {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("✅ ").append(parts.length).append("개의 관련 문서를 찾았습니다.\n\n");
-                        
+                        resultList.getItems().add(parts.length + "개의 관련 문서를 찾았습니다. (클릭하여 폴더 열기)");
+
                         for (int i = 0; i < parts.length; i++) {
                             String part = parts[i].trim();
                             if (!part.isEmpty()) {
-                                sb.append(String.format("%d. %s%s\n", 
-                                        i + 1, 
-                                        DOC_PATH, 
-                                        part));
+                                String fullPath = DOC_PATH + part;
+                                resultList.getItems().add(String.format("%d. %s", i + 1, fullPath));
                             }
                         }
-                        resultArea.setText(sb.toString());
                     } else {
-                        resultArea.setText("관련 문서를 찾을 수 없습니다.\n\n" +
-                                         "다음을 확인해주세요:\n" +
-                                         "• 검색어를 다시 확인해주세요\n" +
-                                         "• 폴더 경로가 올바른지 확인해주세요\n" +
-                                         "• 해당 폴더에 문서가 있는지 확인해주세요");
+                        resultList.getItems().add("관련 문서를 찾을 수 없습니다.");
+                        resultList.getItems().add("");
+                        resultList.getItems().add("다음을 확인해주세요:");
+                        resultList.getItems().add("  • 검색어를 다시 확인해주세요");
+                        resultList.getItems().add("  • 폴더 경로가 올바른지 확인해주세요");
+                        resultList.getItems().add("  • 해당 폴더에 문서가 있는지 확인해주세요");
                     }
                 } else {
-                    resultArea.setText("검색 결과 형식이 올바르지 않습니다.");
+                    resultList.getItems().add("검색 결과 형식이 올바르지 않습니다.");
                 }
             } else {
                 searchClear();
-                resultArea.setText("알 수 없는 응답 형식입니다.");
+                resultList.getItems().add("알 수 없는 응답 형식입니다.");
             }
             
             search_btn.setDisable(false);
@@ -191,7 +242,10 @@ public class RootController implements Initializable {
                 }
             }
             
-            resultArea.setText(errorMessage + "\n\n잠시 후 다시 시도해주세요.");
+            resultList.getItems().add(errorMessage);
+            resultList.getItems().add("");
+            resultList.getItems().add("잠시 후 다시 시도해주세요.");
+            
             System.err.println("검색 실패: " + exception);
             
             if (exception != null) {
@@ -244,7 +298,7 @@ public class RootController implements Initializable {
     }
 
     private void searchClear() {
-        resultArea.clear();
+        resultList.getItems().clear();
     }
 
     private void pathChoice(Alert alert) {
@@ -253,7 +307,7 @@ public class RootController implements Initializable {
             
             alert.setTitle("알림");
             alert.setHeaderText(null);
-            alert.getDialogPane().setPrefSize(250, 100);
+            alert.getDialogPane().setPrefSize(300, 120);
             
             if (txt.isEmpty()) {
                 flag = true;
@@ -263,27 +317,91 @@ public class RootController implements Initializable {
             }
             
             try {
-                if (isFolder(txt)) {
+                if (isFolderInvalid(txt)) {
                     flag = true;
                     alert.setContentText("유효하지 않은 폴더 경로입니다.\n실제 존재하는 폴더를 입력해주세요.");
+                    alert.showAndWait();
                 } else {
+                    // 경로 설정
                     setDocPath(txt);
                     flag = false;
-                    alert.setContentText("경로 설정 완료\n문서: " + DOCUMENTS.size() + "개");
+                    
+                    // 진행 알림용 새 Alert 생성
+                    Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
+                    progressAlert.setTitle("알림");
+                    progressAlert.setHeaderText(null);
+                    progressAlert.getDialogPane().setPrefSize(300, 120);
+                    progressAlert.setContentText("경로 설정 완료!\n인덱싱을 시작합니다...");
+                    progressAlert.show();
+                    
+                    // 버튼 비활성화
+                    path_btn.setDisable(true);
+                    search_btn.setDisable(true);
+                    
+                    Task<Void> indexTask = getTaskIndex();
+                    
+                    indexTask.setOnSucceeded(e -> {
+                        // UI 업데이트
+                        sumDoc.setText(String.valueOf(DOCUMENTS.size()));
+                        
+                        // 버튼 활성화
+                        path_btn.setDisable(false);
+                        search_btn.setDisable(false);
+                        
+                        // 진행 알림 닫기
+                        progressAlert.close();
+                        
+                        // 완료 알림 (새 Alert)
+                        Alert completionAlert = new Alert(Alert.AlertType.INFORMATION);
+                        completionAlert.setTitle("알림");
+                        completionAlert.setHeaderText(null);
+                        completionAlert.getDialogPane().setPrefSize(300, 120);
+                        completionAlert.setContentText("인덱싱 완료!\n문서: " + DOCUMENTS.size() + "개");
+                        completionAlert.showAndWait();
+                    });
+                    
+                    indexTask.setOnFailed(e -> {
+                        Throwable exception = indexTask.getException();
+                        
+                        // 버튼 활성화
+                        path_btn.setDisable(false);
+                        search_btn.setDisable(false);
+                        
+                        // 진행 알림 닫기
+                        progressAlert.close();
+                        
+                        // 오류 알림 (새 Alert)
+                        Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                        errorAlert.setTitle("오류");
+                        errorAlert.setHeaderText(null);
+                        errorAlert.getDialogPane().setPrefSize(300, 120);
+                        String errorMsg = exception != null ? exception.getMessage() : "알 수 없는 오류";
+                        errorAlert.setContentText("인덱싱 실패\n" + errorMsg);
+                        errorAlert.showAndWait();
+                        
+                        System.err.println("인덱싱 실패: " + exception);
+                        if (exception != null) {
+                            exception.printStackTrace();
+                        }
+                    });
+                    
+                    // 백그라운드에서 인덱싱 실행
+                    Thread thread = new Thread(indexTask);
+                    thread.setDaemon(false);
+                    thread.start();
                 }
             } catch (Exception e) {
                 flag = true;
                 alert.setContentText("경로 확인 중 오류 발생:\n" + e.getMessage());
                 System.err.println("경로 검증 오류: " + e.getMessage());
+                alert.showAndWait();
             }
-            
-            alert.showAndWait();
         });
     }
 
     private void clearButton() {
         clear_btn.setOnMouseClicked(event -> {
-            resultArea.setText("");
+            resultList.getItems().clear();
         });
     }
 }

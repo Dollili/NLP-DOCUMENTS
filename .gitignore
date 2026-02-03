@@ -33,3 +33,5 @@ document_index.dat
 *.png
 *.dat
 *.properties
+
+/target

@@ -28,9 +28,27 @@ public class IndexService {
 
     // 문서 인덱싱 시작
     public static void getDocuments(CallBack func) {
-        ForkJoinPool pool = new ForkJoinPool(MAX_WORKER);
-        pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0, func));
-        pool.shutdown();
+        ForkJoinPool pool = null;
+        try {
+            DOCUMENTS.clear();
+
+            pool = new ForkJoinPool(MAX_WORKER);
+            pool.invoke(new FileUtils.FolderTask(new File(DOC_PATH), 0, func));
+        } finally {
+            if (pool != null) {
+                pool.shutdown();
+                try {
+                    // 최대 30초 대기
+                    if (!pool.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)) {
+                        System.err.println("경고: 인덱싱 작업이 제한 시간 내에 완료되지 않았습니다.");
+                        pool.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    pool.shutdownNow();
+                }
+            }
+        }
     }
 
     public static boolean shouldRebuildIndex(String path) {

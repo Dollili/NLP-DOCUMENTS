@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Text?>
@@ -11,10 +11,10 @@
     <TextField fx:id="search_input" layoutX="229.0" layoutY="51.0" prefHeight="23.0" prefWidth="193.0" />
     <Text layoutX="171.0" layoutY="66.0" strokeType="OUTSIDE" strokeWidth="0.0" text="검색어" />
     <Text layoutX="155.0" layoutY="40.0" strokeType="OUTSIDE" strokeWidth="0.0" text="기본 경로" />
-    <TextArea fx:id="resultArea" layoutX="18.0" layoutY="102.0" prefHeight="209.0" prefWidth="486.0" />
+    <ListView fx:id="resultList" layoutX="18.0" layoutY="102.0" prefHeight="209.0" prefWidth="486.0" />
     <Text id="timeout" layoutX="514.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="소요 시간: " />
     <Text fx:id="time" layoutX="577.0" layoutY="210.0" strokeType="OUTSIDE" strokeWidth="0.0" text="0 sec" />
-    <Text layoutX="18.0" layoutY="85.0" strokeType="OUTSIDE" strokeWidth="0.0" text="관련 경로 상위 10" wrappingWidth="157.4296875">
+    <Text layoutX="18.0" layoutY="85.0" strokeType="OUTSIDE" strokeWidth="0.0" text="관련 경로 (클릭하여 폴더 열기)" wrappingWidth="200.0">
     </Text>
     <Text layoutX="514.0" layoutY="228.0" strokeType="OUTSIDE" strokeWidth="0.0" text="찾은 경로 수:" />
     <Text fx:id="sumDoc" layoutX="592.0" layoutY="227.0" strokeType="OUTSIDE" strokeWidth="0.0" text="값" />

@@ -28,6 +28,10 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### Logs ###
+logs/
+*.log
+
 document_index.json
 document_index.dat
 *.png

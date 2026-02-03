@@ -1,6 +1,8 @@
 package rag.util;
 
 import org.apache.commons.io.FilenameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rag.model.CallBack;
 import rag.model.Document;
 
@@ -18,6 +20,7 @@ import static rag.config.AppConfig.DOCUMENTS;
 import static rag.config.AppConfig.DOC_PATH;
 
 public class FileUtils {
+    private static final Logger logger = LoggerFactory.getLogger(FileUtils.class);
     private static final int MAX_DEPTHS = 4;
 
     /**
@@ -42,13 +45,13 @@ public class FileUtils {
                 if (lastSeparator > 0) {
                     folder = new File(path.substring(0, lastSeparator));
                 } else {
-                    System.err.println("유효하지 않은 경로: " + fullPath);
+                    logger.error("유효하지 않은 경로: {}", fullPath);
                     return false;
                 }
             }
             
             if (folder == null || !folder.exists()) {
-                System.err.println("폴더가 존재하지 않습니다: " + folder);
+                logger.error("폴더가 존재하지 않습니다: {}", folder);
                 return false;
             }
             
@@ -57,7 +60,7 @@ public class FileUtils {
                 Desktop desktop = Desktop.getDesktop();
                 if (desktop.isSupported(Desktop.Action.OPEN)) {
                     desktop.open(folder);
-                    System.out.println("폴더 열기 성공: " + folder.getAbsolutePath());
+                    logger.info("폴더 열기 성공: {}", folder.getAbsolutePath());
                     return true;
                 }
             }
@@ -77,8 +80,7 @@ public class FileUtils {
             
             return true;
         } catch (IOException e) {
-            System.err.println("폴더 열기 실패: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("폴더 열기 실패: {}", fullPath, e);
             return false;
         }
     }
@@ -121,11 +123,11 @@ public class FileUtils {
                             subTasks.add(new FolderTask(file, depth + 1, callback)); // 하위 디렉토리를 새로운 태스크로 추가
                         }
                     } catch (Exception e) {
-                        System.err.println("파일 탐색 중 오류 발생: " + e.getMessage());
+                        logger.error("파일 탐색 중 오류 발생", e);
                     }
                 }
             } catch (IOException e) {
-                System.err.println("디렉토리 접근 실패: " + e.getMessage());
+                logger.error("디렉토리 접근 실패", e);
             }
 
             // 병렬 실행

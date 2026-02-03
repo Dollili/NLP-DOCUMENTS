@@ -2,6 +2,8 @@ package rag.service;
 
 import com.google.genai.Client;
 import com.google.genai.types.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rag.exception.ApiException;
 import rag.model.Document;
 import rag.util.LRUCache;
@@ -15,6 +17,8 @@ import static rag.config.AppConfig.DOCUMENTS;
 import static rag.config.CacheConfig.*;
 
 public class SearchService {
+    private static final Logger logger = LoggerFactory.getLogger(SearchService.class);
+    
     private static final String G_API_KEY = "";
 
     // LRU 캐시
@@ -54,10 +58,10 @@ public class SearchService {
             }
 
         } catch (ApiException e) {
-            System.err.println("API 오류 발생: " + e.getUserMessage());
+            logger.error("API 오류 발생: {}", e.getUserMessage());
             result.put("error", e.getUserMessage());
         } catch (Exception e) {
-            System.err.println("검색 중 오류 발생: " + e.getMessage());
+            logger.error("검색 중 오류 발생", e);
             result.put("error", "검색 중 오류가 발생했습니다: " + e.getMessage());
         }
 
@@ -71,7 +75,7 @@ public class SearchService {
     public static String[] googleGemini(String question, List<Document> docs) throws ApiException {
         // 캐시 확인
         if (cache.containsKey(question)) {
-            System.out.println("캐시에서 결과 반환: " + question);
+            logger.info("캐시에서 결과 반환: {}", question);
             return cache.get(question);
         }
 
@@ -95,8 +99,8 @@ public class SearchService {
         List<Document> limitedDocs = docs;
         boolean isLimited = false;
         if (docs.size() > MAX_DOCUMENTS_IN_PROMPT) {
-            System.out.println("경고: 문서 수가 " + docs.size() + "개로 너무 많습니다. " + 
-                             MAX_DOCUMENTS_IN_PROMPT + "개로 제한합니다.");
+            logger.warn("문서 수가 {}개로 너무 많습니다. {}개로 제한합니다.", 
+                       docs.size(), MAX_DOCUMENTS_IN_PROMPT);
             limitedDocs = docs.subList(0, MAX_DOCUMENTS_IN_PROMPT);
             isLimited = true;
         }
@@ -122,7 +126,7 @@ public class SearchService {
 
         // 프롬프트 크기 로깅
         int promptLength = prompt.length();
-        System.out.println("프롬프트 크기: " + promptLength + " 문자, 문서 수: " + limitedDocs.size());
+        logger.debug("프롬프트 크기: {} 문자, 문서 수: {}", promptLength, limitedDocs.size());
 
         // Content 객체 생성 (올바른 방법)
         Content content = Content.fromParts(
@@ -155,7 +159,7 @@ public class SearchService {
                     // finishReason이 Optional로 감싸져 있으므로 안전하게 처리
                     if (candidate.finishReason().isPresent()) {
                         String finishReason = candidate.finishReason().get().toString();
-                        System.out.println("Finish Reason: " + finishReason);
+                        logger.debug("Finish Reason: {}", finishReason);
 
                         if ("STOP".equals(finishReason)) {
                             break; // 성공 시 루프 탈출
@@ -174,7 +178,7 @@ public class SearchService {
                         }
                     } else {
                         // finishReason이 없는 경우 - 정상적으로 처리
-                        System.out.println("Finish Reason: 없음 (정상 처리)");
+                        logger.debug("Finish Reason: 없음 (정상 처리)");
                         break;
                     }
                 } else {
@@ -205,14 +209,14 @@ public class SearchService {
                     }
                 }
 
-                System.err.println("에러 발생 (" + (i + 1) + "/" + maxRetries + "): " + 
-                                 errorStatus + " (코드: " + httpCode + ")");
+                logger.warn("에러 발생 ({}/{}): {} (코드: {})", 
+                           i + 1, maxRetries, errorStatus, httpCode);
 
                 // 재시도 가능한 에러인 경우
                 if (i < maxRetries - 1 && (httpCode == 429 || httpCode >= 500)) {
                     try {
                         long waitTime = (long) Math.pow(2, i) * 1000; // 지수 백오프
-                        System.out.println("재시도 대기 중... (" + waitTime + "ms)");
+                        logger.info("재시도 대기 중... ({}ms)", waitTime);
                         Thread.sleep(waitTime);
                         continue;
                     } catch (InterruptedException ie) {
@@ -246,7 +250,7 @@ public class SearchService {
             String answer = response.text(); // 간단한 text() 메서드 사용
             
             if (answer == null || answer.trim().isEmpty()) {
-                System.err.println("AI 응답이 비어있습니다.");
+                logger.warn("AI 응답이 비어있습니다.");
                 return new String[0];
             }
 
@@ -255,7 +259,7 @@ public class SearchService {
             if (lowerAnswer.contains("없습니다") || lowerAnswer.contains("실패") || 
                 lowerAnswer.contains("죄송") || lowerAnswer.contains("찾을 수 없") || 
                 lowerAnswer.contains("않았습니다")) {
-                System.out.println("관련 문서를 찾지 못했습니다: " + answer);
+                logger.info("관련 문서를 찾지 못했습니다: {}", answer);
                 return new String[0];
             }
 
@@ -280,7 +284,7 @@ public class SearchService {
                 synchronized (cache) {
                     cache.put(question, results);
                 }
-                System.out.println("검색 결과 캐시에 저장: " + question + " (" + results.length + "개)");
+                logger.info("검색 결과 캐시에 저장: {} ({}개)", question, results.length);
             }
 
             return results;

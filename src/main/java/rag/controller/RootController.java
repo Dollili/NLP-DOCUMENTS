@@ -5,6 +5,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rag.service.IndexService;
 import rag.service.SearchService;
 
@@ -17,6 +19,8 @@ import static rag.util.FileUtils.isFolderInvalid;
 import static rag.util.FileUtils.openFolderInExplorer;
 
 public class RootController implements Initializable {
+    private static final Logger logger = LoggerFactory.getLogger(RootController.class);
+    
     //base 경로
     @FXML
     public Button path_btn;
@@ -101,8 +105,10 @@ public class RootController implements Initializable {
                     // "1. 경로" 형식에서 경로만 추출
                     String path = extractPathFromListItem(selectedItem);
                     if (path != null) {
+                        logger.info("폴더 열기 시도: {}", path);
                         boolean success = openFolderInExplorer(path);
                         if (!success) {
+                            logger.error("폴더 열기 실패: {}", path);
                             Alert errorAlert = new Alert(Alert.AlertType.ERROR);
                             errorAlert.setTitle("오류");
                             errorAlert.setHeaderText(null);
@@ -246,11 +252,7 @@ public class RootController implements Initializable {
             resultList.getItems().add("");
             resultList.getItems().add("잠시 후 다시 시도해주세요.");
             
-            System.err.println("검색 실패: " + exception);
-            
-            if (exception != null) {
-                exception.printStackTrace();
-            }
+            logger.error("검색 실패", exception);
             
             search_btn.setDisable(false);
         });
@@ -281,8 +283,7 @@ public class RootController implements Initializable {
                     }
                 } catch (Exception e) {
                     updateMessage("인덱스 처리 실패: " + e.getMessage());
-                    System.err.println("인덱스 작업 실패: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("인덱스 작업 실패", e);
                 }
                 return null;
             }
@@ -379,10 +380,7 @@ public class RootController implements Initializable {
                         errorAlert.setContentText("인덱싱 실패\n" + errorMsg);
                         errorAlert.showAndWait();
                         
-                        System.err.println("인덱싱 실패: " + exception);
-                        if (exception != null) {
-                            exception.printStackTrace();
-                        }
+                        logger.error("인덱싱 실패", exception);
                     });
                     
                     // 백그라운드에서 인덱싱 실행
@@ -393,7 +391,7 @@ public class RootController implements Initializable {
             } catch (Exception e) {
                 flag = true;
                 alert.setContentText("경로 확인 중 오류 발생:\n" + e.getMessage());
-                System.err.println("경로 검증 오류: " + e.getMessage());
+                logger.error("경로 검증 오류", e);
                 alert.showAndWait();
             }
         });

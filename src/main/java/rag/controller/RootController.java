@@ -36,6 +36,8 @@ public class RootController implements Initializable {
     @FXML
     public ListView<String> resultList;  // TextArea -> ListView로 변경
     @FXML
+    public ProgressBar searchProgressBar;  // ProgressBar 추가
+    @FXML
     public Text sumDoc;
     @FXML
     public Button clear_btn;
@@ -148,7 +150,10 @@ public class RootController implements Initializable {
     private void startSearch() {
         search_btn.setDisable(true);
         resultList.getItems().clear();
-        resultList.getItems().add("조회 중...");
+        
+        // ProgressBar 표시 및 무한 진행 모드로 설정
+        searchProgressBar.setVisible(true);
+        searchProgressBar.setProgress(-1.0);
         
         Task<Map<String, Object>> task = getMapTask();
 
@@ -170,6 +175,9 @@ public class RootController implements Initializable {
         };
 
         task.setOnSucceeded(e -> {
+            // ProgressBar 숨기기
+            searchProgressBar.setVisible(false);
+            
             Map<String, Object> result = task.getValue();
             
             if (result == null) {
@@ -234,6 +242,9 @@ public class RootController implements Initializable {
         });
 
         task.setOnFailed(e -> {
+            // ProgressBar 숨기기
+            searchProgressBar.setVisible(false);
+            
             searchClear();
             Throwable exception = task.getException();
             

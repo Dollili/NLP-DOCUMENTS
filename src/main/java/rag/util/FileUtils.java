@@ -30,6 +30,10 @@ public class FileUtils {
      */
     public static boolean openFolderInExplorer(String fullPath) {
         try {
+            if (fullPath == null || fullPath.trim().isEmpty()) {
+                return false;
+            }
+
             File file = new File(fullPath);
             File folder;
             
